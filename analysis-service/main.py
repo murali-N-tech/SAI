@@ -1,80 +1,72 @@
 import os
 import shutil
-from fastapi import FastAPI, Form, File, UploadFile, HTTPException, Header
+import requests
+from fastapi import FastAPI, Form, File, UploadFile, HTTPException, Header, BackgroundTasks
 
 # --- Import your custom analyzer modules ---
 from analyzers import vertical_jump, situps, endurance, shuttle_run, utils
 
 # --- Configuration ---
-# Initialize the FastAPI app with a title for the auto-generated docs
 app = FastAPI(title="Khel Pratibha Analysis Service")
 
-# Get the internal API secret from environment variables for security.
-# Provide a default value for easier development.
-INTERNAL_API_SECRET ="khel-pratibha-internal-secret-987xyz"
+INTERNAL_API_SECRET = "khel-pratibha-internal-secret-987xyz"
+BACKEND_CALLBACK_URL = "http://localhost:5000/api/v1/submissions/update-score"
 
+async def analyze_video_in_background(temp_video_path: str, testType: str, submissionId: str, athleteHeightCm: float = None):
+    score = -1  # Default to -1 to indicate an error
+    try:
+        processed_video_path = utils.preprocess_video(temp_video_path)
+        
+        print(f"🔬 Analyzing test '{testType}' for submission '{submissionId}'...")
+        if testType == 'Vertical Jump':
+            score = vertical_jump.calculate_height(processed_video_path, athleteHeightCm)
+        elif testType == 'Sit-ups':
+            score = situps.count_reps(processed_video_path)
+        elif testType == 'Endurance Run':
+            score = endurance.count_high_knees(processed_video_path)
+        elif testType == 'Shuttle Run':
+            score = shuttle_run.count_laps(processed_video_path)
+        else:
+            raise ValueError(f"Unsupported test type: {testType}")
+        
+        print(f"🏆 Analysis complete for {submissionId}. Score: {score}")
 
-# --- API Endpoint ---
+    except Exception as e:
+        print(f"❌ An error occurred during analysis for {submissionId}: {e}")
+    
+    finally:
+        try:
+            print(f"📞 Calling back backend for submission {submissionId} with score {score}")
+            requests.patch(BACKEND_CALLBACK_URL, json={"submissionId": submissionId, "score": score})
+        except Exception as cb_error:
+            print(f"🚨 Failed to send score back to backend for {submissionId}: {cb_error}")
+
+        if os.path.exists(temp_video_path):
+            os.remove(temp_video_path)
+        if 'processed_video_path' in locals() and os.path.exists(processed_video_path):
+            os.remove(processed_video_path)
+
 @app.post("/analyze")
 async def analyze_video(
-    # --- Input Parameters from the multipart/form-data request ---
+    background_tasks: BackgroundTasks,
     video: UploadFile = File(...),
     testType: str = Form(...),
-    athleteHeightCm: float = Form(None),  # Optional, but required for vertical jump
-
-    # --- Security Header ---
+    submissionId: str = Form(...),
+    athleteHeightCm: float = Form(None),
     x_internal_api_secret: str = Header(...)
 ):
-    """
-    This endpoint receives a video file directly, analyzes it based on the test type,
-    and returns the calculated score to the caller (your Node.js backend).
-    """
-    # 1. Security Check: Ensure the request is from a trusted source.
     if x_internal_api_secret != INTERNAL_API_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid API secret.")
 
-    # 2. Save Uploaded File Temporarily: OpenCV needs a file path to read from.
-    # We save the uploaded file to a temporary location on the server's disk.
     temp_video_path = f"temp_{video.filename}"
     try:
         with open(temp_video_path, "wb") as buffer:
             shutil.copyfileobj(video.file, buffer)
     except Exception as e:
-        print(f"Error saving temporary file: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save video file for processing.")
+        # If saving the file fails, return an error immediately
+        raise HTTPException(status_code=500, detail=f"Failed to save video file: {e}")
 
-    score = 0
-    try:
-        # 3. Route to the Correct Analyzer Function
-        print(f"🔬 Analyzing test '{testType}' from file '{temp_video_path}'...")
-        if testType == 'Vertical Jump':
-            if not athleteHeightCm:
-                raise HTTPException(status_code=400, detail="Athlete height (cm) is required for Vertical Jump analysis.")
-            score = vertical_jump.calculate_height(temp_video_path, athleteHeightCm)
-        elif testType == 'Sit-ups':
-            score = situps.count_reps(temp_video_path)
-        elif testType == 'Endurance Run':
-            score = endurance.count_high_knees(temp_video_path)
-        elif testType == 'Shuttle Run':
-            score = shuttle_run.count_laps(temp_video_path)
-        else:
-            # If the test type sent from the backend is not supported
-            raise HTTPException(status_code=400, detail=f"Invalid or unsupported test type: {testType}")
-        
-        print(f"🏆 Analysis complete. Score: {score}")
 
-    except Exception as e:
-        # Catch any errors during the analysis process
-        print(f"❌ An error occurred during analysis: {e}")
-        # Re-raise as an HTTPException to send a proper error response
-        raise HTTPException(status_code=500, detail=f"Video analysis failed. Reason: {str(e)}")
-    
-    finally:
-        # 4. Cleanup: This block always runs, ensuring we delete the temporary file
-        # to prevent filling up the server's disk space.
-        if os.path.exists(temp_video_path):
-            os.remove(temp_video_path)
-            print(f"🗑️ Cleaned up temporary file: {temp_video_path}")
+    background_tasks.add_task(analyze_video_in_background, temp_video_path, testType, submissionId, athleteHeightCm)
             
-    # 5. Return the Score: Send a successful JSON response with the score
-    return {"message": "Analysis successful", "score": score}
+    return {"message": "Analysis has been started in the background."}

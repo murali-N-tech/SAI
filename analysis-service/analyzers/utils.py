@@ -2,6 +2,22 @@ import cv2
 import numpy as np
 import requests
 import os
+from moviepy.editor import VideoFileClip
+
+def preprocess_video(video_path: str, target_resolution=(640, 480), target_fps=30) -> str:
+    """
+    Preprocesses a video to a standard resolution and FPS.
+    Returns the path to the processed video.
+    """
+    processed_video_path = f"processed_{os.path.basename(video_path)}"
+    
+    # Use moviepy to resize and change FPS
+    clip = VideoFileClip(video_path)
+    clip_resized = clip.resize(height=target_resolution[1], width=target_resolution[0])
+    clip_resized.write_videofile(processed_video_path, fps=target_fps)
+    
+    return processed_video_path
+
 
 def download_video(video_url: str, temp_dir: str = "temp_videos") -> str:
     """

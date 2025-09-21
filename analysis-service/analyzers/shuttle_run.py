@@ -2,55 +2,36 @@ import cv2
 import numpy as np
 import mediapipe as mp
 
-def find_markers(frame):
+def find_lines(frame):
     """
-    Finds two bright orange markers in the initial frame to set the shuttle run boundaries.
-    Returns the x-coordinates of the two markers.
+    Finds two vertical lines in the initial frame to set the shuttle run boundaries.
+    Returns the x-coordinates of the two lines.
     """
-    # Convert the frame to the HSV color space, which is better for color detection
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
 
-    # Define the range for a bright orange color in HSV
-    # This range can be adjusted if using different colored markers
-    lower_orange = np.array([5, 150, 150])
-    upper_orange = np.array([15, 255, 255])
-
-    # Create a mask that isolates the orange pixels
-    mask = cv2.inRange(hsv, lower_orange, upper_orange)
-
-    # Clean up the mask with morphological operations to remove noise
-    mask = cv2.erode(mask, None, iterations=2)
-    mask = cv2.dilate(mask, None, iterations=2)
-
-    # Find the contours of the objects in the mask
-    contours, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    if len(contours) < 2:
-        print("Warning: Could not detect two markers. Please use bright orange cones.")
+    if lines is None:
         return None, None
-
-    # Sort contours by area and take the two largest ones
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:2]
-
-    marker_x_coords = []
-    for c in contours:
-        # Calculate the center (centroid) of the contour
-        M = cv2.moments(c)
-        if M["m00"] > 0:
-            cx = int(M["m10"] / M["m00"])
-            marker_x_coords.append(cx)
-
-    if len(marker_x_coords) == 2:
-        # Sort the coordinates to have a consistent left and right marker
-        return sorted(marker_x_coords)
     
-    return None, None
+    x_coords = []
+    for rho, theta in lines[0]:
+        if np.isclose(theta, 0) or np.isclose(theta, np.pi):
+            a = np.cos(theta)
+            x0 = a * rho
+            x_coords.append(x0)
+
+    if len(x_coords) < 2:
+        return None, None
+    
+    x_coords = sorted(x_coords)
+    return x_coords[0], x_coords[-1]
 
 
 def count_laps(video_path: str) -> int:
     """
     Counts the number of completed shuttle run laps in a video.
-    It auto-detects two orange markers to define the running lanes.
+    It auto-detects two vertical lines to define the running lanes.
     """
     mp_pose = mp.solutions.pose
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -60,11 +41,17 @@ def count_laps(video_path: str) -> int:
         print("Error: Could not open video.")
         return 0
 
-    left_marker_x, right_marker_x = None, None
+    left_line_x, right_line_x = None, None
     lap_counter = 0
     # State tracks which side the athlete is on. Starts outside the markers.
     state = "outside" 
 
+    # Kalman filter for predictive tracking
+    kalman = cv2.KalmanFilter(4, 2)
+    kalman.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
+    kalman.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
+    kalman.processNoiseCov = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.03
+    
     frame_count = 0
     while cap.isOpened():
         ret, frame = cap.read()
@@ -72,18 +59,18 @@ def count_laps(video_path: str) -> int:
             break
 
         frame_count += 1
-        # --- Marker Detection on the first valid frame ---
-        if left_marker_x is None and frame_count > 10: # Wait a few frames for camera to stabilize
-            left_marker_x, right_marker_x = find_markers(frame)
-            if left_marker_x is None:
-                print("Failed to initialize markers. Aborting analysis.")
+        # --- Line Detection on the first valid frame ---
+        if left_line_x is None and frame_count > 10: # Wait a few frames for camera to stabilize
+            left_line_x, right_line_x = find_lines(frame)
+            if left_line_x is None:
+                print("Failed to initialize lines. Aborting analysis.")
                 cap.release()
                 pose.close()
                 return 0
-            print(f"Markers detected at X-coordinates: {left_marker_x}, {right_marker_x}")
+            print(f"Lines detected at X-coordinates: {left_line_x}, {right_line_x}")
 
-        if left_marker_x is None:
-            continue # Skip analysis until markers are found
+        if left_line_x is None:
+            continue # Skip analysis until lines are found
 
         # --- Athlete Tracking ---
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -97,26 +84,33 @@ def count_laps(video_path: str) -> int:
             right_hip_x = landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x
             athlete_center_x = (left_hip_x + right_hip_x) / 2 * frame.shape[1] # Convert to pixel coordinates
 
+            # Use Kalman filter to predict and correct the position
+            prediction = kalman.predict()
+            measurement = np.array([[np.float32(athlete_center_x)], [np.float32(0)]])
+            kalman.correct(measurement)
+            
+            predicted_x = prediction[0][0]
+
             # --- State Machine for Lap Counting ---
             # This logic prevents counting a lap multiple times if an athlete hovers near a line.
             
             # Athlete crosses the right marker from the left
-            if athlete_center_x > right_marker_x and state == "at_left_marker":
+            if predicted_x > right_line_x and state == "at_left_marker":
                 lap_counter += 1
                 state = "at_right_marker"
                 print(f"Lap {lap_counter} completed (Right)")
 
             # Athlete crosses the left marker from the right
-            elif athlete_center_x < left_marker_x and state == "at_right_marker":
+            elif predicted_x < left_line_x and state == "at_right_marker":
                 lap_counter += 1
                 state = "at_left_marker"
                 print(f"Lap {lap_counter} completed (Left)")
 
             # Initial state: athlete starts by crossing one of the lines
             elif state == "outside":
-                if athlete_center_x > left_marker_x and athlete_center_x < right_marker_x:
+                if predicted_x > left_line_x and predicted_x < right_line_x:
                     # Determine which side they are closer to, to set the initial state
-                    if abs(athlete_center_x - left_marker_x) < abs(athlete_center_x - right_marker_x):
+                    if abs(predicted_x - left_line_x) < abs(predicted_x - right_line_x):
                         state = "at_left_marker"
                     else:
                         state = "at_right_marker"

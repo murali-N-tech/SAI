@@ -1,15 +1,18 @@
 import { Router } from 'express';
-import { createSubmission, getMySubmissions, updateSubmissionScore } from '../controllers/submission.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/upload.middleware.js';
+import { 
+    createSubmission, 
+    getMySubmissions, // FIX: This now correctly imports getMySubmissions
+    updateSubmissionScore 
+} from '../controllers/submission.controller.js';
 
 const router = Router();
 
-// Secured routes for athletes
-router.route("/").post(verifyJWT, upload.single('video'), createSubmission);
-router.route("/me").get(verifyJWT, getMySubmissions);
+router.route('/')
+    .post(verifyJWT, upload.single('video'), createSubmission)
+    .get(verifyJWT, getMySubmissions); // FIX: This now uses the correct function
 
-// Internal route for the analysis service
-router.route("/update-score/:submissionId").patch(updateSubmissionScore);
+router.route('/update-score').patch(updateSubmissionScore);
 
 export default router;
