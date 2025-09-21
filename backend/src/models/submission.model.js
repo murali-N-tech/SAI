@@ -11,10 +11,10 @@ const submissionSchema = new mongoose.Schema({
         ref: 'Test',
         required: true,
     },
-    videoUrl: { type: String, required: true },
+    videoUrl: { type: String }, // No longer required
     status: {
         type: String,
-        enum: ['pending', 'analyzing', 'completed', 'failed'],
+        enum: ['pending', 'analyzing', 'completed', 'failed', 'normal_user', 'prospect_approved'], // Added new statuses
         default: 'pending',
     },
     score: { type: Number, default: 0 },

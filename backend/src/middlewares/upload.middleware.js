@@ -1,12 +1,21 @@
 import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+
+const uploadDir = './temp_uploads';
+
+// Ensure the upload directory exists
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Save files to a temporary directory on the server's disk
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, './temp_uploads/') // Make sure this folder exists
+      cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-      cb(null, `${Date.now()}-${file.originalname}`)
+      cb(null, `${Date.now()}-${file.originalname}`);
     }
 });
 

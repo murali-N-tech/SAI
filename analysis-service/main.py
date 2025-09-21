@@ -11,7 +11,7 @@ app = FastAPI(title="Khel Pratibha Analysis Service")
 
 # Get the internal API secret from environment variables for security.
 # Provide a default value for easier development.
-INTERNAL_API_SECRET = os.getenv("ANALYSIS_API_SECRET", "default_secret_for_development")
+INTERNAL_API_SECRET ="khel-pratibha-internal-secret-987xyz"
 
 
 # --- API Endpoint ---
