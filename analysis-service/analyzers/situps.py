@@ -16,8 +16,6 @@ def count_reps(video_path: str) -> int:
     
     counter = 0
     state = "down"  # Start in the 'down' position
-    down_frames = 0
-    min_down_frames = 5 # Require at least 5 frames in the down position
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -42,17 +40,14 @@ def count_reps(video_path: str) -> int:
             angle = calculate_angle(shoulder, hip, knee)
             
             # State machine logic
-            # Stricter thresholds
-            if angle < 90:  # Threshold for 'up' position
-                if state == "down" and down_frames >= min_down_frames:
+            if angle < 100:  # Threshold for 'up' position
+                if state == "down":
                     counter += 1
                     state = "up"
             
-            if angle > 170:  # Threshold for 'down' position
+            if angle > 160:  # Threshold for 'down' position
                 if state == "up":
                     state = "down"
-                    down_frames = 0
-                down_frames += 1
         except:
             # Landmark not visible, skip frame
             pass

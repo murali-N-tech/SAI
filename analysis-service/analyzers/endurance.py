@@ -33,26 +33,19 @@ def count_high_knees(video_path: str) -> int:
             left_knee_y = landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y
             right_hip_y = landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y
             right_knee_y = landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y
-            
-            # Get waist height (average of hips)
-            waist_y = (left_hip_y + right_hip_y) / 2
-
-            # Knee-to-waist ratio
-            left_knee_ratio = left_knee_y / waist_y
-            right_knee_ratio = right_knee_y / waist_y
 
             # Left leg logic
-            if left_knee_ratio < 1 and left_leg_state == "down":
+            if left_knee_y < left_hip_y and left_leg_state == "down":
                 left_leg_state = "up"
                 counter += 1
-            elif left_knee_ratio > 1:
+            elif left_knee_y > left_hip_y:
                 left_leg_state = "down"
 
             # Right leg logic
-            if right_knee_ratio < 1 and right_leg_state == "down":
+            if right_knee_y < right_hip_y and right_leg_state == "down":
                 right_leg_state = "up"
                 counter += 1
-            elif right_knee_ratio > 1:
+            elif right_knee_y > right_hip_y:
                 right_leg_state = "down"
         except:
             pass
