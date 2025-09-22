@@ -38,3 +38,17 @@ export interface LeaderboardEntry {
     score: number;
     date: string;
 }
+
+export interface Post {
+    _id: string;
+    user: User;
+    videoUrl: string;
+    description: string;
+    createdAt: string;
+}
+
+export interface Test {
+  _id: string; // Changed from id to _id to match the database
+  name: string;
+  description: string;
+}

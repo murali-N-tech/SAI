@@ -9,10 +9,11 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
+import postRoutes from './routes/post.routes.js';
+import testRoutes from './routes/test.routes.js'; // <-- IMPORT THE NEW ROUTE
 
 // Load environment variables
 dotenv.config();
-console.log("My ImageKit Public Key:", process.env.IMAGEKIT_PUBLIC_KEY);
 
 // Connect to Database
 connectDB();
@@ -33,6 +34,8 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/leaderboard', leaderboardRoutes);
+app.use('/api/v1/posts', postRoutes);
+app.use('/api/v1/tests', testRoutes); // <-- USE THE NEW ROUTE
 
 // Simple health check route
 app.get('/', (req, res) => {

@@ -7,16 +7,17 @@ import { useAuth } from '../hooks/useAuth';
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import DashboardScreen from '../screens/DashboardScreen';
 import TestScreen from '../screens/TestScreen';
-import LeaderboardScreen from '../screens/LeaderboardScreen';
 import NotFoundScreen from '../screens/NotFoundScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import TabNavigator from './TabNavigator'; // <-- Import the new TabNavigator
+
 import { RootStackParamList } from '../types/navigation';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, user, loading } = useAuth();
 
     if (loading) {
         return (
@@ -31,9 +32,12 @@ const AppNavigator = () => {
             <Stack.Navigator>
                 {isAuthenticated ? (
                     <>
-                        <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Your Dashboard' }} />
+                        {/* Main app is now the TabNavigator */}
+                        <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
                         <Stack.Screen name="Test" component={TestScreen} options={({ route }) => ({ title: route.params.testName })} />
-                        <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+                        {user?.role === 'admin' && (
+                            <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Admin Dashboard' }} />
+                        )}
                     </>
                 ) : (
                     <>

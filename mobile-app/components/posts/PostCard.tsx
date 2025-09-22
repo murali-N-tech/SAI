@@ -1,21 +1,27 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Test } from '../../types/api';
-import Button from '../common/Button';
+import { Post } from '../../types/api';
+import { Video } from 'expo-av';
 
-interface TestCardProps {
-    test: Test;
-    onPress: () => void; // Changed from onSelect to onPress
+interface PostCardProps {
+    post: Post;
 }
 
-const TestCard: React.FC<TestCardProps> = ({ test, onPress }) => {
+const PostCard: React.FC<PostCardProps> = ({ post }) => {
     return (
         <View style={styles.card}>
-            <View>
-                <Text style={styles.name}>{test.name}</Text>
-                <Text style={styles.description}>{test.description}</Text>
-            </View>
-            <Button onPress={onPress}>Start Test</Button>
+            <Text style={styles.name}>{post.user.name}</Text>
+            <Text style={styles.description}>{post.description}</Text>
+            <Video
+                source={{ uri: post.videoUrl }}
+                rate={1.0}
+                volume={1.0}
+                isMuted={false}
+                resizeMode="cover"
+                shouldPlay
+                isLooping
+                style={styles.video}
+            />
         </View>
     );
 };
@@ -31,7 +37,6 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 3,
         marginBottom: 16,
-        justifyContent: 'space-between',
     },
     name: {
         fontSize: 18,
@@ -44,6 +49,10 @@ const styles = StyleSheet.create({
         marginTop: 8,
         marginBottom: 16,
     },
+    video: {
+        width: '100%',
+        height: 200,
+    },
 });
 
-export default TestCard;
+export default PostCard;

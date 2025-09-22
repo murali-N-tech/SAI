@@ -5,42 +5,30 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import api from '../lib/axios';
 import { Submission, Test } from '../types/api';
 import { RootStackParamList } from '../types/navigation';
-import StatCard from '../components/dashboard/StatCard';
 import ProgressChart from '../components/dashboard/ProgressChart';
 import TestCard from '../components/tests/TestCard';
 import Spinner from '../components/common/Spinner';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/common/Button';
 
-const MOCK_TESTS: Test[] = [
-    { id: '60d0fe4f5311236168a109ca', name: 'Vertical Jump', description: 'Test your explosive leg power.' },
-    { id: '60d0fe4f5311236168a109cb', name: 'Sit-ups', description: 'Measure your core muscular endurance.' },
-    { id: '60d0fe4f5311236168a109cc', name: 'Endurance Run', description: 'A proxy test for cardiovascular fitness.' },
-    { id: '60d0fe4f5311236168a109cd', name: 'Shuttle Run', description: 'Test your agility and speed.' },
-];
-
-type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
+type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
 const DashboardScreen = () => {
     const navigation = useNavigation<DashboardScreenNavigationProp>();
     const { user, logout } = useAuth();
     const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [tests, setTests] = useState<Test[]>([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ total: 0, bestScore: 0 });
     const [refreshing, setRefreshing] = useState(false);
 
     const fetchData = async () => {
         try {
-            const response = await api.get('/submissions/me');
-            const userSubmissions: Submission[] = response.data.data;
-            setSubmissions(userSubmissions);
-
-            if (userSubmissions.length > 0) {
-                const best = userSubmissions.reduce((max, s) => s.score > max ? s.score : max, 0);
-                setStats({ total: userSubmissions.length, bestScore: best });
-            } else {
-                setStats({ total: 0, bestScore: 0 });
-            }
+            const [submissionsRes, testsRes] = await Promise.all([
+                api.get('/submissions'),
+                api.get('/tests')
+            ]);
+            setSubmissions(submissionsRes.data.data);
+            setTests(testsRes.data.data);
         } catch (error) {
             console.error("Failed to fetch dashboard data", error);
         } finally {
@@ -73,23 +61,22 @@ const DashboardScreen = () => {
         >
             <View style={styles.header}>
                 <Text style={styles.title}>Welcome, {user?.name}!</Text>
+                {user?.role === 'admin' &&
+                    <Button onPress={() => navigation.navigate('AdminDashboard')} style={{ width: 120, paddingVertical: 8 }}>Admin</Button>
+                }
                 <Button onPress={logout} variant="danger" style={{width: 100, paddingVertical: 8}}>Logout</Button>
-            </View>
-
-            <View style={styles.statsSection}>
-                <StatCard title="Tests Taken" value={stats.total} />
-                <StatCard title="Best Score" value={stats.bestScore.toFixed(2)} />
             </View>
 
             <ProgressChart submissions={submissions} />
 
             <View style={styles.testsSection}>
                 <Text style={styles.sectionTitle}>Available Tests</Text>
-                {MOCK_TESTS.map(test => (
+                {tests.map(test => (
                     <TestCard
-                        key={test.id}
+                        key={test._id}
                         test={test}
-                        onPress={() => navigation.navigate('Test', { testId: test.id, testName: test.name })}
+                        // Corrected prop name and passing _id
+                        onPress={() => navigation.navigate('Test', { testId: test._id, testName: test.name })}
                     />
                 ))}
             </View>
@@ -115,12 +102,6 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#1f2937',
-    },
-    statsSection: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        gap: 16,
-        marginBottom: 24,
     },
     testsSection: {
         marginTop: 24,

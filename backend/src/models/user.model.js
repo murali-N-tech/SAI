@@ -31,9 +31,9 @@ userSchema.methods.isPasswordCorrect = async function(password){
 // Method to generate JWT
 userSchema.methods.generateAccessToken = function(){
     return jwt.sign(
-        { _id: this._id, email: this.email, role: this.role },
+        { _id: this._id, email: this.email, role: this.role, name: this.name },
         process.env.JWT_SECRET,
-        { expiresIn: '1d' }
+        { expiresIn: '30d' } // <-- Increased token expiration to 30 days
     );
 }
 

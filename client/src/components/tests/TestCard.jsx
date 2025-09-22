@@ -10,7 +10,8 @@ const TestCard = ({ test }) => {
                 <p className="text-sm text-gray-600 mt-2">{test.description}</p>
             </div>
             <div className="mt-4">
-                <Link to={`/test/${test.id}`}>
+                {/* CORRECTED: Changed test.id to test._id */}
+                <Link to={`/test/${test._id}`}>
                     <Button variant="primary">Start Test</Button>
                 </Link>
             </div>

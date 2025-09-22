@@ -5,10 +5,12 @@ export type RootStackParamList = {
   Home: undefined;
   Login: undefined;
   Register: undefined;
-  Dashboard: undefined;
+  Main: undefined; // Renamed from Dashboard to Main
   Test: { testId: string, testName: string };
   Leaderboard: undefined;
   NotFound: undefined;
+  Feed: undefined;
+  AdminDashboard: undefined;
 };
 
 export type TestScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Test'>;

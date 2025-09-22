@@ -4,18 +4,24 @@ import api from '../lib/axios';
 import { LeaderboardEntry, Test } from '../types/api';
 import { Picker } from '@react-native-picker/picker';
 
-const MOCK_TESTS: Test[] = [
-    { id: '60d0fe4f5311236168a109ca', name: 'Vertical Jump', description: 'Test your explosive leg power.' },
-    { id: '60d0fe4f5311236168a109cb', name: 'Sit-ups', description: 'Measure your core muscular endurance.' },
-    { id: '60d0fe4f5311236168a109cc', name: 'Endurance Run', description: 'A proxy test for cardiovascular fitness.' },
-    { id: '60d0fe4f5311236168a109cd', name: 'Shuttle Run', description: 'Test your agility and speed.' },
-];
-
 const LeaderboardScreen = () => {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [selectedTest, setSelectedTest] = useState<string>(MOCK_TESTS[0].id);
+    const [tests, setTests] = useState<Test[]>([]);
+    const [selectedTest, setSelectedTest] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    const fetchTests = async () => {
+        try {
+            const response = await api.get('/tests');
+            setTests(response.data.data);
+            if (response.data.data.length > 0) {
+                setSelectedTest(response.data.data[0]._id);
+            }
+        } catch (error) {
+            console.error("Failed to fetch tests", error);
+        }
+    };
 
     const fetchLeaderboard = async (testId: string) => {
         setLoading(true);
@@ -32,6 +38,10 @@ const LeaderboardScreen = () => {
     };
 
     useEffect(() => {
+        fetchTests();
+    }, []);
+
+    useEffect(() => {
         if (selectedTest) {
             fetchLeaderboard(selectedTest);
         }
@@ -39,7 +49,9 @@ const LeaderboardScreen = () => {
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
-        fetchLeaderboard(selectedTest);
+        if (selectedTest) {
+            fetchLeaderboard(selectedTest);
+        }
     }, [selectedTest]);
 
 
@@ -61,8 +73,8 @@ const LeaderboardScreen = () => {
                   selectedValue={selectedTest}
                   onValueChange={(itemValue) => setSelectedTest(itemValue)}
               >
-                  {MOCK_TESTS.map(test => (
-                      <Picker.Item key={test.id} label={test.name} value={test.id} />
+                  {tests.map(test => (
+                      <Picker.Item key={test._id} label={test.name} value={test._id} />
                   ))}
               </Picker>
             </View>
