@@ -3,7 +3,8 @@ import shutil
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException, Header
 
 # --- Import your custom analyzer modules ---
-from analyzers import vertical_jump, situps, endurance, shuttle_run, utils
+# ADD 'pushups' to the import list
+from analyzers import vertical_jump, situps, endurance, shuttle_run, pushups, utils
 
 # --- Configuration ---
 # Initialize the FastAPI app with a title for the auto-generated docs
@@ -57,10 +58,15 @@ async def analyze_video(
             score = endurance.count_high_knees(temp_video_path)
         elif testType == 'Shuttle Run':
             score = shuttle_run.count_laps(temp_video_path)
+        
+        # ADD THIS 'elif' BLOCK
+        elif testType == 'Push-ups':
+            score = pushups.count_reps(temp_video_path)
+            
         else:
             # If the test type sent from the backend is not supported
             raise HTTPException(status_code=400, detail=f"Invalid or unsupported test type: {testType}")
-        
+
         print(f"🏆 Analysis complete. Score: {score}")
 
     except Exception as e:
@@ -68,13 +74,13 @@ async def analyze_video(
         print(f"❌ An error occurred during analysis: {e}")
         # Re-raise as an HTTPException to send a proper error response
         raise HTTPException(status_code=500, detail=f"Video analysis failed. Reason: {str(e)}")
-    
+
     finally:
         # 4. Cleanup: This block always runs, ensuring we delete the temporary file
         # to prevent filling up the server's disk space.
         if os.path.exists(temp_video_path):
             os.remove(temp_video_path)
             print(f"🗑️ Cleaned up temporary file: {temp_video_path}")
-            
+
     # 5. Return the Score: Send a successful JSON response with the score
     return {"message": "Analysis successful", "score": score}

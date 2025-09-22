@@ -51,6 +51,10 @@ const createSubmission = asyncHandler(async (req, res) => {
         if (test.name === 'Vertical Jump' && req.user.height) {
             formData.append('athleteHeightCm', req.user.height);
         }
+        // NEW CODE FOR PUSH-UPS
+        if (test.name === 'Push-ups' && req.user.weight) {
+            // You might add logic here if push-ups require weight, but we'll keep it simple for now.
+        }
 
         const analysisResponse = await axios.post(
             process.env.ANALYSIS_SERVICE_URL,

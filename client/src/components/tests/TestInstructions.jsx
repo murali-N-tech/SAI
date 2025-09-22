@@ -27,7 +27,13 @@ const TestInstructions = ({ test }) => {
             "Ensure both cones are visible in the video frame.",
             "Start at one cone and run to the other, touching the line.",
             "Repeat as many times as you can within the video duration."
-        ]
+        ],
+        'Push-ups': [
+        "Place your hands shoulder-width apart.",
+        "Keep your body in a straight line from head to heels.",
+        "Lower your body until your chest nearly touches the floor.",
+        "Push back up to the starting position."
+    ]
     };
 
     const instructionsList = MOCK_INSTRUCTIONS[test.name] || ["No specific instructions available."];
