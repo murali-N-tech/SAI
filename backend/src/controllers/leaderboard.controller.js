@@ -1,47 +1,59 @@
 import { Submission } from '../models/submission.model.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import mongoose from 'mongoose';
 
 const getLeaderboardByTest = asyncHandler(async (req, res) => {
     const { testId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(testId)) {
+        return res.status(400).json(new ApiResponse(400, null, "Invalid Test ID format."));
+    }
+
     const leaderboard = await Submission.aggregate([
-        // Filter by the specific test and completed status
-        { $match: { test: new mongoose.Types.ObjectId(testId), status: 'completed' } },
-        // Sort by score descending
+        // Match submissions for the specific test
+        { $match: { test: new mongoose.Types.ObjectId(testId) } }, // <-- FIX: Used 'new' keyword
+
+        // Sort by score descending to get the highest score first
         { $sort: { score: -1 } },
+
         // Group by athlete to get their best score
         {
             $group: {
-                _id: "$athlete",
-                bestScore: { $first: "$score" },
-                submissionDate: { $first: "$createdAt" }
+                _id: '$athlete',
+                highScore: { $first: '$score' },
+                submissionDate: { $first: '$createdAt' },
             }
         },
-        // Re-sort after grouping
-        { $sort: { bestScore: -1 } },
-        // Limit to top 50
-        { $limit: 50 },
-        // Lookup user details
+
+        // Sort again by the high score
+        { $sort: { highScore: -1 } },
+
+        // Limit to top 10
+        { $limit: 10 },
+
+        // Lookup athlete details
         {
             $lookup: {
-                from: "users",
-                localField: "_id",
-                foreignField: "_id",
-                as: "athleteDetails"
+                from: 'users',
+                localField: '_id', // high-level grouping
+                foreignField: '_id',
+                as: 'athleteInfo'
             }
         },
-        // Deconstruct the athleteDetails array
-        { $unwind: "$athleteDetails" },
-        // Project final fields
+
+        // Deconstruct the athleteInfo array
+        { $unwind: '$athleteInfo' },
+
+        // Project the final fields
         {
             $project: {
                 _id: 0,
-                athleteId: "$_id",
-                name: "$athleteDetails.name",
-                location: "$athleteDetails.location",
-                score: "$bestScore",
-                date: "$submissionDate"
+                athleteId: '$_id',
+                name: '$athleteInfo.name',
+                location: '$athleteInfo.location',
+                score: '$highScore',
+                date: '$submissionDate'
             }
         }
     ]);
