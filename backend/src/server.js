@@ -1,3 +1,4 @@
+// src/server.js
 import './config/dotenv.config.js';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
@@ -10,7 +11,8 @@ import userRoutes from './routes/user.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
 import postRoutes from './routes/post.routes.js';
-import testRoutes from './routes/test.routes.js'; // <-- IMPORT THE NEW ROUTE
+import testRoutes from './routes/test.routes.js';
+import mediaRoutes from './routes/media.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -28,20 +30,20 @@ app.use(cors({
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 
-
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/submissions', submissionRoutes);
 app.use('/api/v1/leaderboard', leaderboardRoutes);
 app.use('/api/v1/posts', postRoutes);
-app.use('/api/v1/tests', testRoutes); // <-- USE THE NEW ROUTE
+app.use('/api/v1/tests', testRoutes);
+app.use('/api/v1/media', mediaRoutes); 
 
-// Simple health check route
+
+// Health check
 app.get('/', (req, res) => {
     res.send('Khel Pratibha API is running!');
 });
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "Backend for the Khel Pratibha talent identification platform.",
   "main": "server.js",
+  "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "seed": "node seeder.js -i",
-    "seed:destroy": "node seeder.js -d"
+    "start": "node --env-file=.env src/server.js",
+    "dev": "nodemon --exec 'node --env-file=.env' src/server.js",
+    "seed": "node --env-file=.env seeder.js -i",
+    "seed:destroy": "node --env-file=.env seeder.js -d"
   },
   "keywords": [
     "mern",

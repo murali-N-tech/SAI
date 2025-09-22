@@ -50,9 +50,7 @@ const FeedScreen = () => {
                 renderItem={({ item }) => <PostCard post={item} />}
                 keyExtractor={(item) => item._id}
                 ListEmptyComponent={<Text style={styles.emptyText}>No posts yet. Be the first to share!</Text>}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                }
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             />
         </View>
     );

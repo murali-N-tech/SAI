@@ -38,9 +38,7 @@ const FeedPage = () => {
             <h1 className="text-3xl font-bold text-gray-900">Community Feed</h1>
             {isAuthenticated && <CreatePost onPostCreated={onPostCreated} />}
             <div className="space-y-4">
-                {posts.map(post => (
-                    <PostCard key={post._id} post={post} />
-                ))}
+                {posts.map(post => <PostCard key={post._id} post={post} />)}
             </div>
         </div>
     );
