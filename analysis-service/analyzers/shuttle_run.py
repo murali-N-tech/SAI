@@ -1,9 +1,11 @@
 import cv2
 import mediapipe as mp
+import numpy as np
 
-def count_high_knees(video_path: str) -> int:
+def count_laps(video_path: str) -> int:
     """
-    Counts high knees as a proxy for an endurance test.
+    Counts the number of laps in a shuttle run video.
+    A "lap" is considered one length of the shuttle run (crossing from one side to the other).
     """
     mp_pose = mp.solutions.pose
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -13,44 +15,55 @@ def count_high_knees(video_path: str) -> int:
         print("Error: Could not open video.")
         return 0
 
-    counter = 0
-    left_leg_state = "down"
-    right_leg_state = "down"
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    center_line_x = frame_width / 2
+
+    laps = 0
+    # Possible states: None (for initial frame), "left", "right"
+    position_state = None 
 
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
+        # Convert the BGR image to RGB
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = pose.process(image)
+        image.flags.writeable = False
 
+        # Make detection
+        results = pose.process(image)
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        
+        # Extract landmarks
         try:
             landmarks = results.pose_landmarks.landmark
+            
+            # Use a central landmark like the nose to track horizontal position
+            nose_x = landmarks[mp_pose.PoseLandmark.NOSE.value].x * frame_width
 
-            # Get coordinates for hips and knees
-            left_hip_y = landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y
-            left_knee_y = landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y
-            right_hip_y = landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y
-            right_knee_y = landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y
+            # Initialize the state on the first valid frame
+            if position_state is None:
+                position_state = "left" if nose_x < center_line_x else "right"
 
-            # Left leg logic
-            if left_knee_y < left_hip_y and left_leg_state == "down":
-                left_leg_state = "up"
-                counter += 1
-            elif left_knee_y > left_hip_y:
-                left_leg_state = "down"
+            # Check for crossing the center line to the left
+            if nose_x < center_line_x and position_state == "right":
+                laps += 1
+                position_state = "left"
+                print(f"Crossed to left, laps: {laps}")
 
-            # Right leg logic
-            if right_knee_y < right_hip_y and right_leg_state == "down":
-                right_leg_state = "up"
-                counter += 1
-            elif right_knee_y > right_hip_y:
-                right_leg_state = "down"
-        except:
+            # Check for crossing the center line to the right
+            elif nose_x > center_line_x and position_state == "left":
+                laps += 1
+                position_state = "right"
+                print(f"Crossed to right, laps: {laps}")
+
+        except Exception as e:
+            # Landmark not visible, skip the current frame
             pass
-
+            
     cap.release()
     pose.close()
-
-    return counter
+    
+    return laps
