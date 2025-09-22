@@ -17,7 +17,6 @@ const TabNavigator = () => {
         >
             <Tab.Screen name="DashboardTab" component={DashboardScreen} options={{ title: 'Dashboard' }} />
             <Tab.Screen name="LeaderboardTab" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
-            <Tab.Screen name="FeedTab" component={FeedScreen} options={{ title: 'Feed' }} />
         </Tab.Navigator>
     );
 };

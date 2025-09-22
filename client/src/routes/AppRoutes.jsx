@@ -9,7 +9,7 @@ import TestPage from '../pages/TestPage';
 import LeaderboardPage from '../pages/LeaderboardPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
-import FeedPage from '../pages/FeedPage';
+
 
 const PrivateRoute = ({ children }) => {
     const { isAuthenticated, loading } = useAuth();
@@ -35,7 +35,6 @@ const AppRoutes = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/feed" element={<FeedPage />} />
 
             {/* Private Routes */}
             <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />

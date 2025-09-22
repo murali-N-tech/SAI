@@ -47,8 +47,7 @@ const Navbar = () => {
                     <ul className="flex flex-col mt-4 font-medium lg:flex-row lg:space-x-8 lg:mt-0">
                         <li><NavLink to="/" className={navLinkClass}>Home</NavLink></li>
                         {isAuthenticated && <li><NavLink to="/dashboard" className={navLinkClass}>Dashboard</NavLink></li>}
-                        <li><NavLink to="/leaderboard" className={navLinkClass}>Leaderboard</NavLink></li>
-                        <li><NavLink to="/feed" className={navLinkClass}>Feed</NavLink></li>
+                        <><NavLink to="/leaderboard" className={navLinkClass}>Leaderboard</NavLink></>
                         {isAuthenticated && user.role === 'admin' && <li><NavLink to="/admin" className={navLinkClass}>Admin</NavLink></li>}
                     </ul>
                 </div>
